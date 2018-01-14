@@ -7,6 +7,7 @@
     "lib": "lib"
   },
   "scripts": {
+    "build-ts": "tsc",
     "test": "jest --forceExit"
   },
   "repository": {
@@ -43,6 +44,7 @@
     "debug": "^3.1.0",
     "fs-extra": "^5.0.0",
     "glob-promise": "^3.3.0",
+    "jasmine": "^2.8.0",
     "mz": "^2.7.0",
     "parse-github-url": "^1.0.2",
     "tar": "^4.2.0",

@@ -1,12 +1,11 @@
 import {createReadStream, createWriteStream} from "fs";
-import unzip = require("unzip-stream");
 import {download} from "../download";
 import * as path from "path";
-import {ensureDir, remove} from "fs-extra";
 import {dirname} from "path";
+import {ensureDir, remove} from "fs-extra";
 import {resolveModuleDir} from "../module";
 import {isFunction} from "util";
-import {ResolvingContext} from "./index";
+import unzip = require("unzip-stream");
 import Debug = require("debug");
 const debug = Debug("upk:zip");
 export type ZipOpts = {}
@@ -16,14 +15,8 @@ function isPathProvider(a): a is PathProvider {
     return isFunction(a);
 }
 
-export function resolveZip(url, opts?: PathProvider | ZipOpts): () => Promise<string> {
-    return async function () {
-        const ctx = this as ResolvingContext;
-        return zip(ctx.moduleName, url, opts);
-    }
-}
-
-export async function zip(name, url, opts?: PathProvider | ZipOpts): Promise<string> {
+export const zip = runZip;
+export async function runZip(name: string, url: string, opts?: PathProvider | ZipOpts): Promise<string> {
     const downloadedPath = await
         download(url, resolveModuleDir(name), {
             "content-type": "application/zip"

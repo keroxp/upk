@@ -34,6 +34,7 @@ export type VersionRange = {
     max: Version,
     includeMax: boolean,
     canAccept(version: Version): boolean
+    intersection(range: VersionRange): VersionRange
 }
 
 export function isVersionRange(a): a is VersionRange {
@@ -46,7 +47,7 @@ export function parseVersion(version: string): Version {
     const major = extractVersionComp(matches[i]);
     let minor = extractVersionComp(matches[i+2]);
     let patch = extractVersionComp(matches[i+4]);
-    return createVersion(major, minor, patch);
+    return createVersion(major, minor, patch, version);
 }
 
 function parseVersionRange(version: string): VersionRange {
@@ -82,21 +83,51 @@ function parseVersionRange(version: string): VersionRange {
             }
         }
     }
-    return {
-        min, max, includeMin, includeMax, canAccept(version: Version) {
-            const a = min ? compareVersions(min.toString(), version.toString()) : -1;
-            const b = max ? compareVersions(version.toString(), max.toString()) : -1;
-            return (includeMin && a >= 0) || (!includeMin && a > 0)
-                && (includeMax && b <= 0) || (!includeMax && b < 0);
+    return new _VersionRange(min, max, includeMin, includeMax);
+}
+
+class _VersionRange implements VersionRange {
+    constructor(public readonly min: Version, public readonly max: Version, public readonly includeMin: boolean, public readonly includeMax: boolean) {}
+    canAccept(version: Version) {
+        const a = this.min ? compareVersions(this.min.toString(), version.toString()) : -1;
+        const b = this.max ? compareVersions(version.toString(), this.max.toString()) : -1;
+        return (this.includeMin && a >= 0) || (!this.includeMin && a > 0)
+            && (this.includeMax && b <= 0) || (!this.includeMax && b < 0);
+    }
+    intersection(range: VersionRange) {
+        const a = this;
+        const b = range;
+        const amin = a.min.toString();
+        const bmin = b.min.toString();
+        const amax = a.max.toString();
+        const bmax = b.max.toString();
+        const cmp = compareVersions;
+        if (cmp(bmin, amax) > 0 || cmp(amin, bmax) > 0) {
+            // no intersection
+            // [a] [b] || [b] [a]
+            return void 0;
         }
-    };
+        if (cmp(amin, bmin) <= 0 && cmp(bmax, amax) <= 0) {
+            // [a [b] ]
+            return range;
+        } else if (cmp(bmin, amin) <= 0 && cmp(amax, bmax) <= 0) {
+            // [b [a] ]
+            return this;
+        } else if (cmp(amin, bmax) <= 0) {
+            // <b [a> ]
+            return new _VersionRange(b.min, a.max, b.includeMin, a.includeMax);
+        } else if (cmp(bmin, amax) <= 0) {
+            // <a [b> ]
+            return new _VersionRange(a.min, b.max, a.includeMin, b.includeMax);
+        }
+    }
 }
 
 function clamp(n) {
     return n < 0 ? 0 : n;
 }
 
-export function createVersion(major = 0, minor = 0, patch = 0): Version {
+export function createVersion(major = 0, minor = 0, patch = 0, originalVersion?: string): Version {
     return {
         major: clamp(major),
         minor: clamp(minor),
@@ -117,7 +148,7 @@ export function createVersion(major = 0, minor = 0, patch = 0): Version {
             return createVersion(major, minor, patch + 1)
         },
         toString() {
-            return `${this.major}.${this.minor}.${this.patch}`
+            return originalVersion ? originalVersion : `${this.major}.${this.minor}.${this.patch}`
         }
     };
 }

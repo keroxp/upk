@@ -5,21 +5,14 @@ import {Resolvable, resolveArchive} from "./index";
 import {exists} from "mz/fs";
 import {ensureDir, move, readFile, remove, stat} from "fs-extra";
 import * as path from "path";
-import {DependencyTree} from "../module";
+import {DependencyTree, resolveModuleDir} from "../module";
 import Debug = require("debug");
 const debug = Debug("upk:upk");
 export type UpkOptions = {
 
 }
-export async function dryRunUpk(dtree: DependencyTree, name: string, urlOrResolverr: Resolvable, opts?: UpkOptions) {
-    if (dtree.modules[name]) {
-        throw new Error("duplicated upk dependencies: "+name);
-    }
-    dtree.modules[name] = {
-        name, type: "upk"
-    }
-}
-export async function upk(name: string, urlOrResolver: Resolvable, opts?: UpkOptions) {
+export const upk = runUpk;
+export async function runUpk(name: string, urlOrResolver: Resolvable, opts?: UpkOptions): Promise<string> {
     const extractedPath = await resolveArchive(name, urlOrResolver);
     if (await !exists(extractedPath)) {
         throw new Error(`no file: ${extractedPath}`);
@@ -39,6 +32,7 @@ export async function upk(name: string, urlOrResolver: Resolvable, opts?: UpkOpt
         // .unitypackage file
         await extractUpk(extractedPath);
     }
+    return resolveModuleDir(name);
 }
 
 async function extractUpk(file) {

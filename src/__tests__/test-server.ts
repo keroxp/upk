@@ -9,7 +9,6 @@ export async function start(port: number = 8001) {
     const app = express();
     const http = new Server(app);
     const fixpath = `${__dirname}/../../fixtures`;
-    console.log(resolve(fixpath));
     app.use("/fixtures", servStatic(fixpath, {
         "index": false,
         "setHeaders": (res, path) => {

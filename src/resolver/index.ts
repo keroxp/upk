@@ -1,8 +1,8 @@
 import {basename, resolve} from "path";
 import {download} from "../download";
 import {copy, stat} from "fs-extra";
-import {DependencyTree, resolveModuleDir} from "../module";
-import Global = NodeJS.Global;
+import {resolveModuleDir} from "../module";
+import {UpkfileContext} from "../context";
 
 export type Resolvable = string | (() => Promise<string>);
 
@@ -36,24 +36,21 @@ async function resolveUrl(url: string, out: string) {
 export async function resolveArchive(name: string, resolvable: Resolvable, opts: {dryRun} = {dryRun: false}): Promise<string> {
     let out = await resolveModuleDir(name);
     if (resolvable instanceof Function) {
-        const ctx = resolvingContext({name, dryRun: opts.dryRun});
-        return await resolvable.call(ctx);
+        // promise func
+        return await resolvable();
     } else {
         // url
         return await resolveUrl(resolvable, out);
     }
 }
 
-export type ResolvableProvider = (context: ResolvingContext) => (...args) => Resolvable;
-
-export type ResolvingContext = {
-    moduleName: string,
-    dependencies: DependencyTree,
-    dryRun: boolean
-} & Global;
-
-export function resolvingContext({name, dryRun}): ResolvingContext {
-    return Object.assign(this, {
-        moduleName: name, dryRun
-    });
+export type Submodule = {
+    modulePath: string,
+    upkPath: string
 }
+
+
+export type ResolvingModuleInfo = {
+    runContext: UpkfileContext,
+    moduleName: string,
+};

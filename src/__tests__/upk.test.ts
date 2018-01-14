@@ -14,19 +14,18 @@ describe("upk", () => {
     beforeEach(async () => {
         await clearModuels();
     });
-    test("tar読み込むとどうなるの", async () => {
+    it("tar読み込むとどうなるの", async () => {
         await upk("UniCommon", "./fixtures/UniCommon.unitypackage");
     });
-    test("zipからのupk", async () => {
-        await upk("UniCommon", zip("UniCommon", "http://localhost:8001/fixtures/unicommon.unitypackage.zip"));
+    it("zipからのupk", async () => {
+        await upk("UniCommon", () => zip("UniCommon", "http://localhost:8001/fixtures/unicommon.unitypackage.zip"));
         expect(await exists(resolveModuleDir("unicommon/unicommon.unitypackage"))).toBe(true);
         expect(await exists(resolveModuleDir("unicommon"))).toBe(true);
     });
-    test("unitypackageを含んだフォルダzipからのupk", async () => {
-        await upk("UniCommonDir", zip("UniCommonDir", "http://localhost:8001/fixtures/unicommondir.zip", () => "UniCommon"));
+    it("unitypackageを含んだフォルダzipからのupk", async () => {
+        await upk("UniCommonDir", () => zip("UniCommonDir", "http://localhost:8001/fixtures/unicommondir.zip", () => "UniCommon"));
         expect(await exists(resolveModuleDir("unicommondir"))).toBe(true);
         expect(await exists(resolveModuleDir("unicommondir/unicommon/unicommon.unitypackage"))).toBe(true);
     });
-
     afterAll((cb) => http.close(cb));
 });

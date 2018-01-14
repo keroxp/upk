@@ -11,7 +11,7 @@ describe("zip", () => {
         await clearModuels();
         http = (await start()).http;
     });
-    test("zipダウンロードしてみる", async () => {
+    it("zipダウンロードしてみる", async () => {
        await zip("UniCommon", "http://localhost:8001/fixtures/unicommon.zip");
        expect(await exists(resolveModuleDir("unicommon"))).toBe(true);
     });
