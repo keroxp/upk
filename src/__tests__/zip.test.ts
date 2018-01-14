@@ -1,6 +1,6 @@
 import {start} from "./test-server";
 import {Server} from "http";
-import {zip} from "../zip";
+import {zip} from "../resolver/zip";
 import {exists} from "mz/fs";
 import {clearModuels} from "./utils";
 import {resolveModuleDir} from "../module";

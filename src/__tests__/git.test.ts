@@ -1,4 +1,4 @@
-import {git} from "../git";
+import {git} from "../resolver/git";
 import {exists} from "mz/fs";
 
 describe("git", () => {

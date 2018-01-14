@@ -1,40 +1,32 @@
-import {isFunction, isString} from "util"
 import * as tar from "tar"
 import {createReadStream} from "fs";
-import * as _glob from "glob";
-import {resolveArchive} from "./archive-resolver";
+import glob = require("glob-promise");
+import {Resolvable, resolveArchive} from "./index";
 import {exists} from "mz/fs";
 import {ensureDir, move, readFile, remove, stat} from "fs-extra";
 import * as path from "path";
-
+import {DependencyTree} from "../module";
+import Debug = require("debug");
+const debug = Debug("upk:upk");
 export type UpkOptions = {
 
 }
-export type UpkResolver = (...args) => Promise<string>;
-async function glob(pattern, opts?): Promise<string[]> {
-    return new Promise<string[]>((resolve, reject) => {
-        _glob(pattern, opts, (err, files) => {
-            err ? reject(err) : resolve(files);
-        });
-    });
-}
-export async function upk(name: string, urlOrResolver: string | Promise<string> | UpkResolver, opts?) {
-    let extractedPath: string;
-    if (isString(urlOrResolver)) {
-        extractedPath = await resolveArchive(name, urlOrResolver);
-    } else if (urlOrResolver instanceof Promise) {
-        extractedPath = await urlOrResolver;
-    } else if (isFunction(urlOrResolver)) {
-        extractedPath = await resolveArchive(name, await urlOrResolver());
-    } else {
-        throw new Error("invalid url or resolver: "+urlOrResolver);
+export async function dryRunUpk(dtree: DependencyTree, name: string, urlOrResolverr: Resolvable, opts?: UpkOptions) {
+    if (dtree.modules[name]) {
+        throw new Error("duplicated upk dependencies: "+name);
     }
+    dtree.modules[name] = {
+        name, type: "upk"
+    }
+}
+export async function upk(name: string, urlOrResolver: Resolvable, opts?: UpkOptions) {
+    const extractedPath = await resolveArchive(name, urlOrResolver);
     if (await !exists(extractedPath)) {
         throw new Error(`no file: ${extractedPath}`);
     }
-    console.log(`[${name}] unitypackage has been extracted: ${extractedPath}`);
+    debug(`[${name}] unitypackage has been extracted: ${extractedPath}`);
     if ((await stat(extractedPath)).isDirectory()) {
-        // directyry path that contains at least 1 .unitypackage file
+        // directry path that contains at least 1 .unitypackage file
         const pkgs = await glob(`${extractedPath}/*.unitypackage`);
         if (pkgs.length == 0) {
             throw new Error(`no .unitypackage within ${extractedPath}`);
@@ -69,7 +61,7 @@ async function extractUpk(file) {
                     const asset = path.resolve(guid, "asset");
                     const assetMeta = path.resolve(guid, "asset.meta");
                     const assetDest = path.resolve(assetPath);
-                    console.log(`Extracted: ${assetPath}`);
+                    debug(`Extracted: ${assetPath}`);
                     if ((await exists(asset))) {
                         // asset
                         await ensureDir(path.dirname(assetDest));
