@@ -1,14 +1,12 @@
 import {currentRef, GitOptions, GitTag} from "../resolver/git";
 import {Resolvable} from "../resolver";
-import {
-    createDependencyTree, DependencyTree, resolveModuleDir,
-    ResolverType
-} from "../module";
+import {createDependencyTree, DependencyTree, resolveModuleDir, ResolverType} from "../module";
 import {UpkfileContext} from "./index";
 import {PathProvider} from "../resolver/zip";
-import github = require("parse-github-url");
 import {exists} from "mz/fs";
-import {isVersionRange, isVersionString, parseVersion, resolveVersionRange} from "../version";
+import {isVersionString} from "../version";
+import github = require("parse-github-url");
+import semver = require("semver");
 const debug = require("debug")("upk:context:dryrun");
 export class DryRunContext implements UpkfileContext {
     dependencies: DependencyTree;
@@ -28,21 +26,19 @@ export class DryRunContext implements UpkfileContext {
         const {name} = github(gitUrl);
         const gitdir = resolveModuleDir(name);
         if (await exists(gitdir)) {
-            debug(`git module "${name} already installed. checking version change."`);
-            const ref = await currentRef(gitdir);
+            debug(`git module "${name} is already installed. checking version change."`);
+            const gitref = await currentRef(gitdir);
             const lockedRange = this.globalDependencies[name].version;
             const lockedVersion = this.globalDependencies[name].lockedVersion;
-            if (ref !== lockedVersion) {
-                throw new Error(`unlocked git reference: locked: ${lockedVersion}, actual: ${ref}`);
+            if (gitref !== lockedVersion) {
+                throw new Error(`unlocked git reference: locked: ${lockedVersion}, but actual: ${gitref}`);
             }
-            if (isVersionRange(lockedRange) && isVersionString(version)) {
-                const nextRange = resolveVersionRange(version);
-                const intersection = lockedRange.intersection(nextRange);
-                if (intersection) {
-                    // update version
-                    this.globalDependencies.modules[name].version = intersection;
+            if (isVersionString(lockedRange) && isVersionString(version)) {
+                // 両方ともversion rangeなら、intersectionを見つける
+                if (semver.intersects(lockedRange, version)) {
+                    this.globalDependencies.modules[name].version = semver.maxSatisfying(lockedRange, version);
                 } else {
-                    throw new Error("cannot resolve")
+                    throw new Error(`cannot resolve ranges: locked: ${lockedRange}`)
                 }
             } else if (lockedVersion) {
                 // checkout

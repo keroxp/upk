@@ -57,8 +57,10 @@
     "@types/fs-extra": "^5.0.0",
     "@types/jest": "^22.0.1",
     "@types/mz": "0.0.32",
+    "@types/semver": "^5.4.0",
     "express": "^4.16.2",
     "jest": "^22.0.6",
+    "semver": "^5.4.1",
     "serve-static": "^1.13.1",
     "ts-jest": "^22.0.1",
     "typescript": "^2.6.2"

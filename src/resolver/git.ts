@@ -1,6 +1,6 @@
 import {exec} from "child-process-promise";
 import {resolveModuleDir} from "../module";
-import {createVersionList, isVersionString, resolveVersionRange, VersionList} from "../version";
+import {isVersionString} from "../version";
 import {ResolvingModuleInfo} from "./index";
 import gh = require("parse-github-url");
 import {exists} from "mz/fs";
@@ -8,22 +8,24 @@ import * as path from "path";
 const debug = require("debug")("upk:git");
 export type GitTag = string;
 export type GitOptions = {}
-
-async function coIdealVersion(name: string, gitUrl: string, version?: GitTag) {
+import semver = require("semver");
+async function checkoutIdealVersion(gitdir: string, version?: GitTag) {
+    if (!version) return;
     let coVersion = version;
-    if (isVersionString(version)) {
-        debug(`semantic version was specified: ${version}`);
-        // v0.1.0 or 1.0.0 ~>0.1.2 etc...
-        const versions = await lsRemote(gitUrl);
-        const range = resolveVersionRange(version);
-        coVersion = versions.ideal([range]).toString();
-    }
-    let cmd =`cd ${resolveModuleDir(name)}`;
-    if (version){
+    const cwd = process.cwd();
+    try {
+        if (isVersionString(version)) {
+            debug(`semantic version was specified: ${version}`);
+            // v0.1.0 or 1.0.0 ~>0.1.2 etc...
+            const tags = (await exec("git tag")).stdout.split("\n").filter(isVersionString);
+            coVersion = semver.maxSatisfying(tags, version);
+        }
+        process.chdir(gitdir);
         debug(`try to checkout: ${version}`);
-        cmd += ` && git checkout ${coVersion}`;
+        await exec(`git checkout ${coVersion}`);
+    } finally {
+        process.chdir(cwd);
     }
-    await exec(cmd);
 }
 
 export async function isGitDir(gitpath: string): Promise<boolean> {
@@ -60,10 +62,9 @@ export function parseGitRef(ref: string) {
     throw new Error(`ref:${ref} is not result of git symbolic-ref`);
 }
 
-export async function lsRemote(gitUrl: string): Promise<VersionList> {
+export async function lsRemote(gitUrl: string): Promise<string[]> {
     const result = (await exec(`git ls-remote -t ${gitUrl}`)).stdout as string;
-    const versions = result.split("\n").map(ln => ln.split("\t")[1]);
-    return createVersionList(...versions);
+    return result.split("\n").map(ln => ln.split("\t")[1]);
 }
 
 export async function clone(gitUrl: string, version?: GitTag, opts?: GitOptions) {
@@ -84,8 +85,8 @@ export async function clone(gitUrl: string, version?: GitTag, opts?: GitOptions)
 }
 
 export async function runGit(context: ResolvingModuleInfo, urlLike: string, version?: GitTag, opts?: GitOptions) {
-    await clone(urlLike);
-    await coIdealVersion(context.moduleName, urlLike, version);
+    const gitdir = await clone(urlLike);
+    await checkoutIdealVersion(gitdir, version);
     return resolveModuleDir(context.moduleName)
 }
 
