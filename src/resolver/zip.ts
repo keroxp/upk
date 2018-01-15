@@ -7,22 +7,24 @@ import {resolveModuleDir} from "../module";
 import {isFunction} from "util";
 import unzip = require("unzip-stream");
 import Debug = require("debug");
+
 const debug = Debug("upk:zip");
 export type ZipOpts = {}
-export type PathProvider = () => string;
+export type PathResolver = () => string;
 
-function isPathProvider(a): a is PathProvider {
+function isPathProvider(a): a is PathResolver {
     return isFunction(a);
 }
 
 export const zip = runZip;
-export async function runZip(name: string, url: string, opts?: PathProvider | ZipOpts): Promise<string> {
-    const downloadedPath = await
-        download(url, resolveModuleDir(name), {
-            "content-type": "application/zip"
-        });
+
+export async function runZip(name: string, url: string, opts?: PathResolver | ZipOpts): Promise<string> {
+    debug(`runZip: ${name} from ${url}`);
+    const downloadedPath = await download(url, resolveModuleDir(name), {
+        "content-type": "application/zip"
+    });
     const dest = resolveModuleDir(name);
-    debug(`[${name}] zip file has been dwnloaded: ${downloadedPath}`);
+    debug(`[${name}] zip dowload complete:-> ${downloadedPath}`);
     await new Promise((resolve, reject) => {
         createReadStream(downloadedPath)
             .pipe(unzip.Parse({path: dest}))

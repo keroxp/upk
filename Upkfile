@@ -1,1 +1,6 @@
-git "keroxp/unicommon"
+dependencies [
+  git "keroxp/unicommon", "^0.0.7"
+  upk "SDUnity-Chan", "http://unity-chan.com/download/download.php?id=SDUnityChan&v=1.01"
+  upk "Unity-Chan-Toon-Shader", -> zip "http://unity-chan.com/download/download.php?id=UTS2_0&v=2.0.3"
+  upk "SocialConnector", -> git "anchan828/social-connector"
+]

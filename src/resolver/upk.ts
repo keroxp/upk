@@ -19,12 +19,12 @@ export async function runUpk(name: string, urlOrResolver: Resolvable, opts?: Upk
     }
     debug(`[${name}] unitypackage has been extracted: ${extractedPath}`);
     if ((await stat(extractedPath)).isDirectory()) {
-        // directry path that contains at least 1 .unitypackage file
-        const pkgs = await glob(`${extractedPath}/*.unitypackage`);
+        // glob resolved module root and depth1
+        const pkgs = await glob(`${extractedPath}/{,*/}*.unitypackage`);
         if (pkgs.length == 0) {
             throw new Error(`no .unitypackage within ${extractedPath}`);
         } else if (pkgs.length > 1) {
-            throw new Error(`there are ${pkgs.length} .unitypackage files. chose one`);
+            throw new Error(`multiple .unitypackage files found. choose one. ${pkgs}`);
         }
         const pkg = pkgs[0];
         await extractUpk(pkg)
@@ -59,12 +59,18 @@ async function extractUpk(file) {
                     if ((await exists(asset))) {
                         // asset
                         await ensureDir(path.dirname(assetDest));
-                        await move(asset, assetDest);
-                        await move(assetMeta, assetDest+".meta");
+                        await move(asset, assetDest, {
+                            overwrite: true
+                        });
+                        await move(assetMeta, assetDest+".meta", {
+                            overwrite: true
+                        });
                     } else if (await exists(path.resolve(guid,"asset.meta"))) {
                         // directory
                         await ensureDir(path.dirname(assetDest));
-                        await move(assetMeta, assetDest+".meta");
+                        await move(assetMeta, assetDest+".meta", {
+                            overwrite: true
+                        });
                     } else if (await exists(assetPath)){
                         // root
                         await ensureDir(assetDest);
