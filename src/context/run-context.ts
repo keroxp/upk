@@ -31,7 +31,7 @@ export class RunContext extends BaseUpkfileContext implements UpkfileContext {
     }
     async _git (gitUrl: string, version?: GitTag, opts?: GitOptions) {
         const {name} = github(gitUrl);
-        if (!this.globalDependencies.modules[name].shouldUpdate)
+        if (!this.globalDependencies.updateFlags[name])
             return resolveModuleDir(name);
         debug(`git ${gitUrl}, ${version}, ${opts}`);
         const {lockedVersion} = this.globalDependencies.modules[name];
@@ -44,7 +44,7 @@ export class RunContext extends BaseUpkfileContext implements UpkfileContext {
         return this.install(name, this._upk(name, resolver));
     }
     async _upk (name: string, resolver: Resolvable) {
-        if (!this.globalDependencies.modules[name].shouldUpdate)
+        if (!this.globalDependencies.updateFlags[name])
             return resolveModuleDir(name);
         debug(`upk ${name}, ${resolver.toString()}`);
         if (isString(resolver)) {
@@ -58,7 +58,7 @@ export class RunContext extends BaseUpkfileContext implements UpkfileContext {
         return this.install(name, this._asset(name, resolver));
     }
     async _asset (name: string, resolver: Resolvable) {
-        if (!this.globalDependencies.modules[name].shouldUpdate)
+        if (!this.globalDependencies.updateFlags[name])
             return resolveModuleDir(name);
         debug(`asset ${name}, ${resolver.toString()}`);
         if (isString(resolver)) {

@@ -1,23 +1,31 @@
 import * as tar from "tar"
 import {createReadStream} from "fs";
-import glob = require("glob-promise");
-import {Resolvable, resolveArchive} from "./index";
+import {RemoteFileResolveResult, Resolvable, resolveArchive} from "./index";
 import {exists} from "mz/fs";
 import {ensureDir, move, readFile, remove, stat} from "fs-extra";
 import * as path from "path";
-import {DependencyTree, resolveModuleDir} from "../module";
+import {resolveModuleDir} from "../module";
+import {createHash} from "crypto";
+import {isString} from "util";
+import glob = require("glob-promise");
 import Debug = require("debug");
-const debug = Debug("upk:upk");
-export type UpkOptions = {
 
-}
+const debug = Debug("upk:upk");
+
+
+export type UpkOptions = {}
 export const upk = runUpk;
-export async function runUpk(name: string, urlOrResolver: Resolvable, opts?: UpkOptions): Promise<string> {
-    const extractedPath = await resolveArchive(name, urlOrResolver);
+
+export async function runUpk(name: string, urlOrResolver: Resolvable, opts?: UpkOptions): Promise<RemoteFileResolveResult> {
+    let extractedPath = await resolveArchive(name, urlOrResolver);
+    if (!(isString(extractedPath))) {
+        extractedPath = extractedPath.extractedPath;
+    }
     if (await !exists(extractedPath)) {
         throw new Error(`no file: ${extractedPath}`);
     }
     debug(`[${name}] unitypackage has been extracted: ${extractedPath}`);
+    let pkgPath = extractedPath;
     if ((await stat(extractedPath)).isDirectory()) {
         // glob resolved module root and depth1
         const pkgs = await glob(`${extractedPath}/{,*/}*.unitypackage`);
@@ -26,21 +34,23 @@ export async function runUpk(name: string, urlOrResolver: Resolvable, opts?: Upk
         } else if (pkgs.length > 1) {
             throw new Error(`multiple .unitypackage files found. choose one. ${pkgs}`);
         }
-        const pkg = pkgs[0];
-        await extractUpk(pkg)
-    } else {
-        // .unitypackage file
-        await extractUpk(extractedPath);
+        pkgPath = pkgs[0];
     }
-    return resolveModuleDir(name);
+    const integrity = await extractUpk(pkgPath);
+    return {
+        fileIntegrity: integrity,
+        extractedPath: resolveModuleDir(name)
+    }
 }
 
-async function extractUpk(file) {
-    return new Promise(async (resolve, reject) => {
+async function extractUpk(file): Promise<string> {
+    return new Promise<string>(async (resolve, reject) => {
         const {dir} = path.parse(file);
         const out = `${dir}/extracted`;
         await ensureDir(out);
+        const hasher = createHash("sha512");
         createReadStream(file)
+            .on("data", hasher.update)
             .pipe(tar.x({
                 strip: 1,
                 C: out
@@ -62,22 +72,22 @@ async function extractUpk(file) {
                         await move(asset, assetDest, {
                             overwrite: true
                         });
-                        await move(assetMeta, assetDest+".meta", {
+                        await move(assetMeta, assetDest + ".meta", {
                             overwrite: true
                         });
-                    } else if (await exists(path.resolve(guid,"asset.meta"))) {
+                    } else if (await exists(path.resolve(guid, "asset.meta"))) {
                         // directory
                         await ensureDir(path.dirname(assetDest));
-                        await move(assetMeta, assetDest+".meta", {
+                        await move(assetMeta, assetDest + ".meta", {
                             overwrite: true
                         });
-                    } else if (await exists(assetPath)){
+                    } else if (await exists(assetPath)) {
                         // root
                         await ensureDir(assetDest);
                     }
                 }
                 await remove(out);
-                resolve();
+                resolve("sha512-"+hasher.digest("hex"));
             });
     });
 }

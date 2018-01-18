@@ -9,11 +9,27 @@ export class ResolverContext extends BaseUpkfileContext implements UpkfileContex
     }
     async git (gitUrl: string, version?: GitTag, opts?: GitOptions) {
         debug(`git ${gitUrl}, ${version}, ${opts}`);
-        return runGit(this.context, gitUrl, version, opts);
+        const result = await runGit(this.context, gitUrl, version, opts);
+        const module = this.globalDependencies.modules[this.context.moduleName];
+        module.integrity = result.fileIntegrity;
+        module.resolvedUri = gitUrl;
+        return result.extractedPath;
     }
     async zip (url: string, pathResolver: PathResolver) {
         debug(`zip ${url}, ${(pathResolver || "").toString()}`);
-        return runZip(this.context.moduleName, url, pathResolver);
+        const result = await runZip(this.context.moduleName, url, pathResolver);
+        const module = this.globalDependencies.modules[this.context.moduleName];
+        const {integrity, resolvedUri} = module;
+        if (integrity && integrity !== result.fileIntegrity) {
+            throw new Error(`[${this.context.moduleName}] Subresource Integrity Violation found.
+                resolved URI: ${resolvedUri}\n
+                locked integrity: ${integrity}\n
+                resolved integrity: ${integrity}
+            `);
+        }
+        module.resolvedUri = url;
+        module.integrity = integrity;
+        return result.extractedPath;
     }
     upk (name: string, resolver: Resolvable): Promise<string> {
         throw new Error(`upk is not allowed within "${this.type}"`);

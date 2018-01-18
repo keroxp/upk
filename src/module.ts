@@ -16,14 +16,16 @@ export type DependencyInfo = {
     version?: ModuleVersion,
     installedPath?: string,
     lockedVersion?: FixedModuleVersion,
-    shouldUpdate: boolean,
+    resolvedUri?: string,
+    integrity?: string,
     dependencies?: DependencyTree
 }
-export const DependencyTreeFormatVersion = "1.0.0";
+export const DependencyTreeFormatVersion = "1";
 export type DependencyTree = {
     formatVersion: string,
+    updateFlags: {[name: string]: boolean},
     modules: {[name: string]: DependencyInfo }
 }
-export function createDependencyTree(modules: {[name: string]: DependencyInfo} = {}): DependencyTree {
-    return {formatVersion: DependencyTreeFormatVersion, modules}
+export function createDependencyTree(modules: {[name: string]: DependencyInfo} = {}, updateFlags = {}): DependencyTree {
+    return {formatVersion: DependencyTreeFormatVersion, updateFlags, modules}
 }

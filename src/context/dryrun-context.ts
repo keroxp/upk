@@ -40,11 +40,11 @@ export class DryRunContext extends BaseUpkfileContext implements UpkfileContext 
         }
         if (!this.globalDependencies.modules[name]) {
             this.globalDependencies.modules[name] = this.localDependencies.modules[name] = {
-                name, type, version, shouldUpdate
+                name, type, version
             };
             debug(`[${name}] has been registered global dependency. ${this.globalDependencies.modules[name]}`);
         }
-        this.globalDependencies.modules[name].shouldUpdate = shouldUpdate;
+        this.globalDependencies.updateFlags[name] = shouldUpdate;
         return moduleDir;
     }
 

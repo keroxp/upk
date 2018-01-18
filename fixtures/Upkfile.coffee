@@ -1,12 +1,9 @@
 git "keroxp/unicommon", "~>0.0.8"
-#git "neuce/unirx", "5.5.6",
-#  includes: [""],
-#  excludes:["Assets/Plugins"],
-#  map: [
-#    src: "Assets/Plugins/Scripts", dest: "Assets/UniRx/Scripts"
-#]
+git "neuce/unirx", "5.5.6", {
+  include: ["Assets/Plugins/*"]
+}
 git "git@somegit.com:keroxp/some.git"
-zip "https://some.com/asset.zip"
+asset "AssetA", zip "https://some.com/asset.zip"
 asset "LocalAsset", "./local/LocalAsset"
 upk "Unity-Chan", "http://hogehoge.com/utcs.unitypackage"
 upk "SocialConnector", -> git "anchan828/social-connector"

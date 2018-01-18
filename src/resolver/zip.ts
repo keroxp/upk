@@ -7,8 +7,10 @@ import {resolveModuleDir} from "../module";
 import {isFunction} from "util";
 import unzip = require("unzip-stream");
 import Debug = require("debug");
+import {RemoteFileResolveResult} from "./index";
 
 const debug = Debug("upk:zip");
+const crypto = require("crypto");
 export type ZipOpts = {}
 export type PathResolver = () => string;
 
@@ -18,13 +20,14 @@ function isPathProvider(a): a is PathResolver {
 
 export const zip = runZip;
 
-export async function runZip(name: string, url: string, opts?: PathResolver | ZipOpts): Promise<string> {
+export async function runZip(name: string, url: string, opts?: PathResolver | ZipOpts): Promise<RemoteFileResolveResult> {
     debug(`runZip: ${name} from ${url}`);
     const downloadedPath = await download(url, resolveModuleDir(name), {
         "content-type": "application/zip"
     });
     const dest = resolveModuleDir(name);
     debug(`[${name}] zip dowload complete:-> ${downloadedPath}`);
+    const hasher = crypto.createHash("sha512");
     await new Promise((resolve, reject) => {
         createReadStream(downloadedPath)
             .pipe(unzip.Parse({path: dest}))
@@ -52,5 +55,8 @@ export async function runZip(name: string, url: string, opts?: PathResolver | Zi
     if (isPathProvider(opts)) {
         result = path.resolve(dest, opts());
     }
-    return result;
+    return {
+        fileIntegrity: `sha512-${hasher.digest("hex")}`,
+        extractedPath: result
+    };
 }

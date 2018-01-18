@@ -1,7 +1,7 @@
 import {exec} from "child-process-promise";
 import {FixedModuleVersion, resolveModuleDir} from "../module";
 import {isVersionString} from "../version";
-import {ResolvingModuleInfo} from "./index";
+import {RemoteFileResolveResult, ResolvingModuleInfo} from "./index";
 import gh = require("parse-github-url");
 import {exists} from "mz/fs";
 import * as path from "path";
@@ -63,8 +63,8 @@ export async function fetchVersions(gitdir = "."): Promise<string[]> {
     return (await fetchTags(gitdir)).filter(tag => !!semver.valid(tag));
 }
 
-export async function currentCommit(gitdir = "."): Promise<string> {
-    return (await execGitCmd(gitdir,"git rev-parse --short HEAD")).split("\n")[0];
+export async function currentCommit(gitdir = ".", short = true): Promise<string> {
+    return (await execGitCmd(gitdir,`git rev-parse ${short ? "--short" : ""} HEAD`)).split("\n")[0];
 }
 export async function currentRef(gitdir = "."): Promise<string> {
     const cwd = process.cwd();
@@ -123,11 +123,15 @@ export async function clone(gitUrl: string, dest?: string, version?: GitTag, opt
     return gitdir;
 }
 
-export async function runGit(context: ResolvingModuleInfo, urlLike: string, version?: GitTag, opts?: GitOptions) {
+export async function runGit(context: ResolvingModuleInfo, urlLike: string, version?: GitTag, opts?: GitOptions): Promise<RemoteFileResolveResult> {
     const gitdir = await clone(urlLike, resolveModuleDir(context.moduleName));
     const lockedVersion = await checkoutIdealVersion(gitdir, version);
     context.runContext.globalDependencies.modules[context.moduleName].lockedVersion = lockedVersion;
-    return resolveModuleDir(context.moduleName)
+    const sha1 = currentCommit(gitdir, false);
+    return {
+        extractedPath: resolveModuleDir(context.moduleName),
+        fileIntegrity: `git-${sha1}`
+    }
 }
 
 export async function git(urlLike: string, version?: GitTag, opts?: GitOptions) {

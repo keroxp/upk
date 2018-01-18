@@ -12,7 +12,6 @@ export async function download(urlLike: string, dest: string, headers = {}): Pro
         let req: RequestOptions;
         req = Object.assign({}, parsed, {headers});
         http.get(req, async res => {
-            const regex = /filename="(.*)"/gi;
             if (res.statusCode === 200) {
                 let filename = "downloaded";
                 const condis = res.headers["content-disposition"];

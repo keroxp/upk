@@ -4,8 +4,11 @@ import {copy, stat} from "fs-extra";
 import {resolveModuleDir} from "../module";
 import {UpkfileContext} from "../context";
 
-export type Resolvable = string | (() => Promise<string>);
-
+export type Resolvable = string | (() => Promise<string|RemoteFileResolveResult>);
+export type RemoteFileResolveResult = {
+    extractedPath: string,
+    fileIntegrity: string
+}
 async function resolveRemoteFile(url: string, out: string) {
     return await download(url, out);
 }
@@ -33,7 +36,7 @@ async function resolveUrl(url: string, out: string) {
     }
 }
 
-export async function resolveArchive(name: string, resolvable: Resolvable, opts: {dryRun} = {dryRun: false}): Promise<string> {
+export async function resolveArchive(name: string, resolvable: Resolvable, opts: {dryRun} = {dryRun: false}): Promise<string|RemoteFileResolveResult> {
     let out = await resolveModuleDir(name);
     if (resolvable instanceof Function) {
         // promise func
