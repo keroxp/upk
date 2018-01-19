@@ -1,6 +1,6 @@
 {
   "name": "upk",
-  "version": "0.0.1-beta5",
+  "version": "0.0.1-beta6",
   "description": "Easy, Simple Package Dependency Manager for Unity3D",
   "main": "dist/index.js",
   "bin": {
