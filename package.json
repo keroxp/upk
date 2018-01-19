@@ -1,6 +1,6 @@
 {
   "name": "upi",
-  "version": "0.0.1",
+  "version": "0.0.1-beta",
   "description": "Easy, Simple Package Dependency Manager for Unity3D",
   "main": "index.js",
   "directories": {

@@ -15,17 +15,18 @@ export type AssetInstllationOptions = {
 
 export async function installAssets(downloadedDir: string, opts?: AssetInstllationOptions) {
     const orgdir = global["__originalDir"];
-    const include = opts ? opts.include : [{src: "Assets/**/*", dest: "."}];
+    const include = opts ? opts.include : [{src: "Assets/*", dest: "Assets"}];
     const exclude = opts ? opts.exclude : [];
     for (const incl of include) {
         const pat = p.resolve(downloadedDir, incl.src);
-        const files = await glob(pat, {ignore: exclude, nodir: true});
+        const files = await glob(pat, {ignore: exclude});
         debug(files);
         const destdir = p.resolve(orgdir, incl.dest);
         debug(destdir);
         for (const file of files) {
             debug(`copied: ${file}`);
-            const rpath = p.relative(downloadedDir, file);
+            const dir = p.dirname(file);
+            const rpath = p.relative(p.resolve(downloadedDir, dir), file);
             const dest = p.resolve(destdir, rpath);
             await copy(file, dest);
             debug(` -> ${dest}`);

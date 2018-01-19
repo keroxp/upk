@@ -39,8 +39,10 @@ export class RunContext extends BaseUpkfileContext {
         debug(`git ${gitUrl}, ${version}, ${opts}`);
         const {lockedVersion} = this.globalDependencies.modules[name];
         const module = this.globalDependencies.modules[name];
+        const res = await runGit(this.context(name), gitUrl, lockedVersion || version);
         module.integrity = "git-"+await currentCommit(resolveModuleDir(name));
-        return runGit(this.context(name), gitUrl, lockedVersion || version);
+        return res;
+
     }
     zip (url: string, pathResolver: PathResolver): () => Promise<string> {
         throw new Error("zip is not allowed within root context.");
