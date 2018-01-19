@@ -1,40 +1,52 @@
-import {GitOptions, GitTag, runGit} from "../resolver/git";
-import {Resolvable, ResolvingModuleInfo} from "../resolver";
+import {currentCommit, GitOptions, GitTag, runGit} from "../resolver/git";
+import {AssetInstllationOptions, Resolvable, ResolvingModuleInfo} from "../resolver";
 import {PathResolver, runZip} from "../resolver/zip";
 import {BaseUpkfileContext, UpkfileContext} from "./index";
+import {calculateFileIntegrity} from "../integrity";
+const p = require("path");
 const debug = require("debug")("upk:context:resolver");
-export class ResolverContext extends BaseUpkfileContext implements UpkfileContext {
+
+export class ResolverContext extends BaseUpkfileContext {
     constructor(private type: string, private context: ResolvingModuleInfo) {
         super(type, context.runContext.globalDependencies);
     }
-    async git (gitUrl: string, version?: GitTag, opts?: GitOptions) {
-        debug(`git ${gitUrl}, ${version}, ${opts}`);
-        const result = await runGit(this.context, gitUrl, version, opts);
-        const module = this.globalDependencies.modules[this.context.moduleName];
-        module.integrity = result.fileIntegrity;
-        module.resolvedUri = gitUrl;
-        return result.extractedPath;
+
+    git(gitUrl: string, version?: GitTag, opts?: AssetInstllationOptions) {
+        return async () => {
+            debug(`git ${gitUrl}, ${version}, ${opts}`);
+            const result = await runGit(this.context, gitUrl, version);
+            const module = this.globalDependencies.modules[this.context.moduleName];
+            module.integrity = "git-" + await currentCommit(result);
+            module.resolvedUri = gitUrl;
+            return result;
+        }
     }
-    async zip (url: string, pathResolver: PathResolver) {
-        debug(`zip ${url}, ${(pathResolver || "").toString()}`);
-        const result = await runZip(this.context.moduleName, url, pathResolver);
-        const module = this.globalDependencies.modules[this.context.moduleName];
-        const {integrity, resolvedUri} = module;
-        if (integrity && integrity !== result.fileIntegrity) {
-            throw new Error(`[${this.context.moduleName}] Subresource Integrity Violation found.
+
+    zip(url: string, pathResolver?: PathResolver) {
+        return async () => {
+            debug(`zip ${url}, ${(pathResolver || "").toString()}`);
+            const result = await runZip(this.context.moduleName, url);
+            const newIntegrity = "sha512-"+await calculateFileIntegrity(result.downloadedFile);
+            const module = this.globalDependencies.modules[this.context.moduleName];
+            const {integrity, resolvedUri} = module;
+            if (integrity && integrity !== newIntegrity) {
+                throw new Error(`[${this.context.moduleName}] Subresource Integrity Violation found.
                 resolved URI: ${resolvedUri}\n
                 locked integrity: ${integrity}\n
-                resolved integrity: ${integrity}
+                resolved integrity: ${newIntegrity}
             `);
+            }
+            module.resolvedUri = url;
+            module.integrity = newIntegrity;
+            return result.extractedPath;
         }
-        module.resolvedUri = url;
-        module.integrity = integrity;
-        return result.extractedPath;
     }
-    upk (name: string, resolver: Resolvable): Promise<string> {
+
+    upk(name: string, resolver: Resolvable): () => Promise<string> {
         throw new Error(`upk is not allowed within "${this.type}"`);
     }
-    asset (name: string, resolver: Resolvable): Promise<string> {
+
+    asset(name: string, resolver: Resolvable): () => Promise<string> {
         throw new Error(`asset is not allowed within "${this.type}"`);
     }
 }

@@ -7,6 +7,7 @@ import {RunContext} from "../context/run-context";
 import {DryRunContext} from "../context/dryrun-context";
 import * as path from "path";
 import {writeFile} from "fs-extra";
+import {InstallContext} from "../context/install-context";
 
 export async function resolveUpkFile(dir: string): Promise<string> {
     for (const fn of ["Upkfile", "Upkfile.coffee"]) {
@@ -16,11 +17,11 @@ export async function resolveUpkFile(dir: string): Promise<string> {
 }
 
 export type InstallCommandOptions = {
-    upkfile: string, verbose: boolean
+    upkfile: string, verbose: boolean, dryRun: boolean, noExtract: boolean
 }
 const debug = require("debug")("upk:command:install");
 
-export async function install(args: {}, opts: InstallCommandOptions, logger) {
+export async function install(args: {module: string}, opts: InstallCommandOptions, logger) {
     const file = opts.upkfile || await resolveUpkFile(".");
     if (opts.verbose) Debug.enable("upk:*");
     if (!file) {
@@ -38,6 +39,7 @@ export async function install(args: {}, opts: InstallCommandOptions, logger) {
     await dryRun(script, file, deps);
     if (opts["dryRun"]) return;
     await run(script, file, deps);
+    if (!opts.noExtract) await runInstall(script, file, deps);
     await afterRun(file, deps);
 }
 
@@ -65,7 +67,11 @@ export async function run(script: string, upkfile: string, globalDependencies: D
         await CoffeeScript.eval(script, {filename: upkfile});
     });
 }
-
+export async function runInstall(script: string, upkfile: string, depgs: DependencyTree) {
+    await runInContext(new InstallContext(upkfile, depgs), async () =>{
+        await CoffeeScript.eval(script, {filename: upkfile});
+    });
+}
 export async function afterRun(upkfile: string, deps: DependencyTree) {
     // generate lockfile
     const lockFile = `${upkfile}.lock`;

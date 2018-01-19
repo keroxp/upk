@@ -1,7 +1,7 @@
 import {exec} from "child-process-promise";
 import {FixedModuleVersion, resolveModuleDir} from "../module";
 import {isVersionString} from "../version";
-import {RemoteFileResolveResult, ResolvingModuleInfo} from "./index";
+import {AssetInstllationOptions, ResolvingModuleInfo} from "./index";
 import gh = require("parse-github-url");
 import {exists} from "mz/fs";
 import * as path from "path";
@@ -99,11 +99,12 @@ export async function lsRemote(gitUrl: string): Promise<string[]> {
     const result = (await exec(`git ls-remote -t ${gitUrl}`)).stdout as string;
     return result.split("\n").map(ln => ln.split("\t")[1]);
 }
-
-export async function clone(gitUrl: string, dest?: string, version?: GitTag, opts?: GitOptions) {
-    const gitComps = gh(gitUrl);
-    let {name, host, path, protocol} = gitComps;
-    if (!protocol && gitComps.host === "github.com") {
+export function parseGitUrl(url: string) {
+    return gh(url);
+}
+export async function clone(gitUrl: string, dest?: string, version?: GitTag) {
+    let {name, host, path, protocol} = parseGitUrl(gitUrl);
+    if (!protocol && host === "github.com") {
         protocol = "https";
     }
     const url = `${protocol}://${host}/${path}`;
@@ -123,17 +124,13 @@ export async function clone(gitUrl: string, dest?: string, version?: GitTag, opt
     return gitdir;
 }
 
-export async function runGit(context: ResolvingModuleInfo, urlLike: string, version?: GitTag, opts?: GitOptions): Promise<RemoteFileResolveResult> {
+export async function runGit(context: ResolvingModuleInfo, urlLike: string, version?: GitTag): Promise<string> {
     const gitdir = await clone(urlLike, resolveModuleDir(context.moduleName));
     const lockedVersion = await checkoutIdealVersion(gitdir, version);
     context.runContext.globalDependencies.modules[context.moduleName].lockedVersion = lockedVersion;
-    const sha1 = currentCommit(gitdir, false);
-    return {
-        extractedPath: resolveModuleDir(context.moduleName),
-        fileIntegrity: `git-${sha1}`
-    }
+    return resolveModuleDir(context.moduleName);
 }
 
-export async function git(urlLike: string, version?: GitTag, opts?: GitOptions) {
-    return await clone(urlLike, void 0, version, opts);
+export async function git(urlLike: string, version?: GitTag) {
+    return await clone(urlLike, void 0, version);
 }

@@ -14,7 +14,7 @@ export type DependencyInfo = {
     name: string,
     type: ResolverType
     version?: ModuleVersion,
-    installedPath?: string,
+    extractedPath?: string,
     lockedVersion?: FixedModuleVersion,
     resolvedUri?: string,
     integrity?: string,

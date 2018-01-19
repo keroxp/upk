@@ -1,5 +1,5 @@
 import {currentRef, fetchTags, fetchVersions, GitOptions, GitTag, lsRemote} from "../resolver/git";
-import {Resolvable} from "../resolver";
+import {AssetInstllationOptions, Resolvable} from "../resolver";
 import {createDependencyTree, DependencyTree, resolveModuleDir, ResolverType} from "../module";
 import {BaseUpkfileContext, UpkfileContext} from "./index";
 import {PathResolver} from "../resolver/zip";
@@ -11,7 +11,7 @@ import {remove} from "fs-extra";
 
 const debug = require("debug")("upk:context:dryrun");
 
-export class DryRunContext extends BaseUpkfileContext implements UpkfileContext {
+export class DryRunContext extends BaseUpkfileContext {
     constructor(upkfilePath: string, globalDependencies: DependencyTree) {
         super(upkfilePath, globalDependencies)
     }
@@ -42,13 +42,15 @@ export class DryRunContext extends BaseUpkfileContext implements UpkfileContext 
             this.globalDependencies.modules[name] = this.localDependencies.modules[name] = {
                 name, type, version
             };
-            debug(`[${name}] has been registered global dependency. ${this.globalDependencies.modules[name]}`);
+            debug(`[${name}] was registered global dependency. ${this.globalDependencies.modules[name]}`);
         }
         this.globalDependencies.updateFlags[name] = shouldUpdate;
         return moduleDir;
     }
-
-    async git(gitUrl: string, version?: GitTag, opts?: GitOptions) {
+    git(gitUrl: string, version?: GitTag, opts?: AssetInstllationOptions) {
+        return () => this._git(gitUrl, version, opts);
+    }
+    async _git(gitUrl: string, version?: GitTag, opts?: AssetInstllationOptions) {
         const {name} = github(gitUrl);
         const gitdir = resolveModuleDir(name);
         const result = await this.checkDuplication("git", name, version);
@@ -85,15 +87,15 @@ export class DryRunContext extends BaseUpkfileContext implements UpkfileContext 
         return result;
     }
 
-    async zip(url: string, pathResolver: PathResolver): Promise<string> {
+    zip(url: string, pathResolver: PathResolver): () => Promise<string> {
         throw new Error(`zip is not allowed in root context.`);
     }
 
-    async upk(name: string, resolver: Resolvable) {
-        return this.checkDuplication("upk", name);
+    upk(name: string, resolver: Resolvable) {
+        return () => this.checkDuplication("upk", name);
     }
 
-    async asset(name: string, resolver: Resolvable) {
-        return this.checkDuplication("asset", name);
+    asset(name: string, resolver: Resolvable) {
+        return () => this.checkDuplication("asset", name);
     }
 }
