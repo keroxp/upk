@@ -51,13 +51,18 @@ export class RunContext extends BaseUpkfileContext {
     async _upk (name: string, resolver: Resolvable) {
         if (!this.globalDependencies.updateFlags[name])
             return resolveModuleDir(name);
+        let upkPath;
         debug(`upk ${name}, ${resolver.toString()}`);
+        const module = this.globalDependencies.modules[name];
         if (isString(resolver)) {
-            return runUpk(name, resolver);
+            upkPath = await runUpk(name, resolver);
+            module.resolvedUri = resolver;
         } else {
             const resolved = await runInContext(new ResolverContext("upk", this.context(name)), resolver);
-            return runUpk(name, resolved);
+            upkPath = await runUpk(name, resolved);
         }
+        module.integrity = "sha512-"+await calculateFileIntegrity(upkPath);
+        return upkPath;
     }
     asset (name: string, resolver: Resolvable) {
         return () => this.install(name, this._asset(name, resolver));
