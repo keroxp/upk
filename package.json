@@ -1,6 +1,6 @@
 {
   "name": "upk",
-  "version": "0.0.1-beta6",
+  "version": "0.0.1-beta7",
   "description": "Easy, Simple Package Dependency Manager for Unity3D",
   "main": "dist/index.js",
   "bin": {
@@ -14,12 +14,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/keroxp/upk.git"
+    "url": "git+https://github.com/unicommon/upk.git"
   },
   "author": "Yusuke Sakurai <kerokerokerop@gmail.com>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/keroxp/upk/issues"
+    "url": "https://github.com/unicommon/upk/issues"
   },
   "jest": {
     "moduleFileExtensions": [
@@ -36,7 +36,7 @@
     ],
     "testEnvironment": "node"
   },
-  "homepage": "https://github.com/keroxp/upk#readme",
+  "homepage": "https://github.com/unicommon/upk#readme",
   "dependencies": {
     "caporal": "^0.9.0",
     "child-process-promise": "^2.2.1",
